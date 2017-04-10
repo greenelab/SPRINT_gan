@@ -43,7 +43,7 @@ def build_generator(latent_size):
 
     # take a channel axis reduction
     cnn.add(Conv2D(1, 2, padding='same',
-                   activation='sigmoid',
+                   activation='linear',
                    kernel_initializer='glorot_normal'))
 
     # dense layer to reshape
@@ -98,9 +98,9 @@ def build_discriminator():
 
 if __name__ == '__main__':
     # batch and latent size taken from the paper
-    epochs = 100
+    epochs = 1000
     batch_size = 100
-    latent_size = 20
+    latent_size = 100
     training_size = 6000
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
@@ -141,8 +141,10 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 1, 28, 28) with
     # range [-1, 1]
-    X_input = pickle.load(open('./data/X_normalized.pkl', 'rb'))
-    y_input = pickle.load(open('./data/y_normalized.pkl', 'rb'))
+    X_input = pickle.load(open('./data/X_processed.pkl', 'rb'))
+    y_input = pickle.load(open('./data/y_processed.pkl', 'rb'))
+
+    print(X_input.shape, y_input.shape)
 
     X_train = X_input[:training_size]
     X_test = X_input[training_size:]
@@ -185,6 +187,8 @@ if __name__ == '__main__':
             generated_images = generator.predict(
                 [noise, sampled_labels.reshape((-1, 1))], verbose=0)
 
+            # print(image_batch.shape)
+            # print(generated_images.shape)
             X = np.concatenate((image_batch, generated_images))
             y = np.array([1] * batch_size + [0] * batch_size)
             aux_y = np.concatenate((label_batch, sampled_labels), axis=0)
@@ -219,7 +223,7 @@ if __name__ == '__main__':
         generated_images = generator.predict(
             [noise, sampled_labels.reshape((-1, 1))], verbose=False)
 
-        print(generated_images[0])
+        print(generated_images[0].astype(int))
 
         X = np.concatenate((X_test, generated_images))
         y = np.array([1] * num_test + [0] * num_test)
@@ -271,5 +275,5 @@ if __name__ == '__main__':
             directory +
             'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
 
-    pickle.dump({'train': train_history, 'test': test_history},
-                open(directory + 'acgan-history.pkl', 'wb'))
+        pickle.dump({'train': train_history, 'test': test_history},
+                    open(directory + 'acgan-history.pkl', 'wb'))
