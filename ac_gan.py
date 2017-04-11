@@ -180,7 +180,7 @@ if __name__ == '__main__':
             label_batch = y_train[index * batch_size:(index + 1) * batch_size]
 
             # sample some labels from p_c
-            sampled_labels = np.random.randint(0, 1, batch_size)
+            sampled_labels = np.random.randint(0, 2, batch_size)
 
             # generate a batch of fake images, using the generated labels as a
             # conditioner. We reshape the sampled labels to be
@@ -202,7 +202,7 @@ if __name__ == '__main__':
             # the generator optimize over an identical number of images as the
             # discriminator
             noise = np.random.uniform(-1, 1, (2 * batch_size, latent_size))
-            sampled_labels = np.random.randint(0, 1, 2 * batch_size)
+            sampled_labels = np.random.randint(0, 2, 2 * batch_size)
 
             # we want to train the generator to trick the discriminator
             # For the generator, we want all the {fake, not-fake} labels to say
@@ -225,6 +225,7 @@ if __name__ == '__main__':
         generated_images = generator.predict(
             [noise, sampled_labels.reshape((-1, 1))], verbose=False)
 
+        print(sampled_labels[0])
         print(generated_images[0].astype(int))
 
         X = np.concatenate((X_test, generated_images))
