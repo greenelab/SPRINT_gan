@@ -32,17 +32,17 @@ def build_generator(latent_size):
     cnn = Sequential()
 
     cnn.add(Dense(256, input_dim=latent_size, activation='relu'))
-    cnn.add(Dense(128 * 1 * 4, activation='relu'))
-    cnn.add(Reshape((128, 1, 4)))
+    cnn.add(Dense(32 * 3 * 4, activation='relu'))
+    cnn.add(Reshape((32, 3, 4)))
 
     # upsample to (..., 14, 14)
-    cnn.add(UpSampling2D(size=(3, 3)))
+    cnn.add(UpSampling2D(size=(2, 6)))
     cnn.add(Conv2D(256, 5, padding='same',
                    activation='relu',
                    kernel_initializer='glorot_normal'))
 
     # take a channel axis reduction
-    cnn.add(Conv2D(1, 2, padding='same',
+    cnn.add(Conv2D(1, 4, strides=2, padding='same',
                    activation='linear',
                    kernel_initializer='glorot_normal'))
 
@@ -56,15 +56,15 @@ def build_generator(latent_size):
     patient_class = Input(shape=(1,), dtype='int32')
 
     # 10 classes in MNIST
-    cls = Flatten()(Embedding(2, latent_size,
-                              embeddings_initializer='glorot_normal')(patient_class))
+    cls = Flatten()(Embedding(
+                        1, latent_size,
+                        embeddings_initializer='glorot_normal')(patient_class))
 
     # hadamard product between z-space and a class conditional embedding
     h = layers.multiply([latent, cls])
 
     fake_patient = cnn(h)
 
-    cnn.summary()
     return Model([latent, patient_class], fake_patient)
 
 
@@ -82,9 +82,11 @@ def build_discriminator():
     cnn.add(Dropout(0.3))
 
     cnn.add(Flatten())
+    cnn.add(Dense(1024, activation='relu'))
     patient = Input(shape=(1, 3, 12))
 
     features = cnn(patient)
+    cnn.summary()
 
     # first output (name=generation) is whether or not the discriminator
     # thinks the image that is being shown is fake, and the second output
