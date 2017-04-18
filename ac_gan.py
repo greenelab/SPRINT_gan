@@ -20,6 +20,7 @@ from keras.optimizers import Adam
 from keras.utils.generic_utils import Progbar
 import numpy as np
 import os
+import argparse
 
 np.random.seed(1337)
 
@@ -57,7 +58,7 @@ def build_generator(latent_size):
 
     # 10 classes in MNIST
     cls = Flatten()(Embedding(
-                        1, latent_size,
+                        2, latent_size,
                         embeddings_initializer='glorot_normal')(patient_class))
 
     # hadamard product between z-space and a class conditional embedding
@@ -83,6 +84,8 @@ def build_discriminator():
 
     cnn.add(Flatten())
     cnn.add(Dense(1024, activation='relu'))
+    cnn.add(Dropout(0.3))
+    cnn.add(Dense(1024, activation='relu'))
     patient = Input(shape=(1, 3, 12))
 
     features = cnn(patient)
@@ -99,8 +102,14 @@ def build_discriminator():
     return Model(patient, [fake, aux])
 
 if __name__ == '__main__':
-    # batch and latent size taken from the paper
-    epochs = 1000
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--noise", type=float, default=0)
+    parser.add_argument("--clip_value", type=float, default=0)
+    parser.add_argument("--epochs", type=float, default=200)
+
+    args = parser.parse_args()
+
+    epochs = args.epochs
     batch_size = 100
     latent_size = 100
     training_size = 6000
@@ -109,16 +118,26 @@ if __name__ == '__main__':
     adam_lr = 0.0002
     adam_beta_1 = 0.5
 
-    directory = './output/params/'
+    directory = ('./output/' + str(args.noise) + '_' + str(args.clip_value) +
+                 '_' + str(args.epochs) + '/')
+
     if not os.path.exists(directory):
         os.mkdir(directory)
 
-    # build the discriminator
-    discriminator = build_discriminator()
-    discriminator.compile(
-        optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
-        loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
-    )
+    if args.clip_value > 0:
+        # build the discriminator
+        discriminator = build_discriminator()
+        discriminator.compile(
+            optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1,
+                           clipnorm=args.clip_value),
+            loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
+        )
+    else:
+        discriminator = build_discriminator()
+        discriminator.compile(
+            optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
+            loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
+        )
 
     # build the generator
     generator = build_generator(latent_size)
@@ -270,13 +289,14 @@ if __name__ == '__main__':
                              *train_history['discriminator'][-1]))
         print(ROW_FMT.format('discriminator (test)',
                              *test_history['discriminator'][-1]))
-
         generator.save(
             directory +
             'params_generator_epoch_{0:03d}.h5'.format(epoch))
-        discriminator.save(
-            directory +
-            'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
+    
+        if epoch > (epochs-10):
+            discriminator.save(
+                directory +
+                'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
 
         pickle.dump({'train': train_history, 'test': test_history},
                     open(directory + 'acgan-history.pkl', 'wb'))
