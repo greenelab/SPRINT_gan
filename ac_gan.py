@@ -292,7 +292,7 @@ if __name__ == '__main__':
         generator.save(
             directory +
             'params_generator_epoch_{0:03d}.h5'.format(epoch))
-    
+
         if epoch > (epochs-10):
             discriminator.save(
                 directory +
