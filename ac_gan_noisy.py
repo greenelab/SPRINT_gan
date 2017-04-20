@@ -9,6 +9,7 @@ from PIL import Image
 
 from six.moves import range
 
+import tensorflow as tf
 import keras.backend as K
 from keras.datasets import mnist
 from keras import layers
@@ -22,8 +23,10 @@ import numpy as np
 import os
 import argparse
 
+from privacy_accountant import accountant, utils
 from custom_keras.noisy_optimizers import NoisyAdam
 
+training_size = 6000
 np.random.seed(1337)
 K.set_image_data_format('channels_first')
 
@@ -87,8 +90,8 @@ def build_discriminator():
 
     cnn.add(Flatten())
     cnn.add(Dense(1024, activation='relu'))
-    # cnn.add(Dropout(0.3))
-    # cnn.add(Dense(1024, activation='relu'))
+    cnn.add(Dropout(0.3))
+    cnn.add(Dense(1024, activation='relu'))
     patient = Input(shape=(1, 3, 12))
 
     features = cnn(patient)
@@ -110,21 +113,22 @@ if __name__ == '__main__':
     parser.add_argument("--clip_value", type=float, default=0)
     parser.add_argument("--epochs", type=float, default=200)
     parser.add_argument("--lr", type=float, default=0.0002)
+    parser.add_argument("--batch_size", type=int, default=100)
 
     args = parser.parse_args()
 
     print(args)
     epochs = args.epochs
-    batch_size = 100
+    batch_size = args.batch_size
     latent_size = 100
-    training_size = 6000
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = args.lr
     adam_beta_1 = 0.5
 
     directory = ('./output/' + str(args.noise) + '_' + str(args.clip_value) +
-                 '_' + str(args.epochs) + '_' + str(args.lr) + '/')
+                 '_' + str(args.epochs) + '_' + str(args.lr) + '_' +
+                 str(args.batch_size) + '/')
 
     if not os.path.exists(directory):
         os.mkdir(directory)
@@ -220,8 +224,8 @@ if __name__ == '__main__':
             y = np.array([1] * batch_size + [0] * batch_size)
             aux_y = np.concatenate((label_batch, sampled_labels), axis=0)
 
-            # see if the discriminator can figure itself out...
-            epoch_disc_loss.append(discriminator.train_on_batch(X, [y, aux_y]))
+            epoch_disc_loss.append(discriminator.train_on_batch(
+                X, [y, aux_y]))
 
             # make new noise. we generate 2 * batch size here such that we have
             # the generator optimize over an identical number of images as the
