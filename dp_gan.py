@@ -250,11 +250,11 @@ if __name__ == '__main__':
                     [noise, sampled_labels.reshape((-1, 1))],
                     [trick, sampled_labels]))
 
-            privacy_accum_op = priv_accountant.accumulate_privacy_spending(
-                [None, None], args.noise, batch_size)
-
             print('\n accum privacy')
             for index in range(num_batches):
+                privacy_accum_op = priv_accountant.accumulate_privacy_spending(
+                    [None, None], args.noise, batch_size)
+
                 with tf.control_dependencies([privacy_accum_op]):
                     spent_eps_deltas = priv_accountant.get_privacy_spent(
                         sess, target_eps=target_eps)
