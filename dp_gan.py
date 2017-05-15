@@ -22,6 +22,7 @@ from keras.utils.generic_utils import Progbar
 import numpy as np
 import os
 import argparse
+import time
 
 from privacy_accountant import accountant, utils
 from custom_keras.noisy_optimizers import NoisyAdam
@@ -113,7 +114,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--noise", type=float, default=0)
     parser.add_argument("--clip_value", type=float, default=0)
-    parser.add_argument("--epochs", type=float, default=200)
+    parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--lr", type=float, default=0.0002)
     parser.add_argument("--batch_size", type=int, default=100)
 
@@ -206,6 +207,7 @@ if __name__ == '__main__':
             epoch_gen_loss = []
             epoch_disc_loss = []
 
+            train_start_time = time.clock()
             for index in range(num_batches):
                 progress_bar.update(index)
                 # generate a new batch of noise
@@ -234,7 +236,6 @@ if __name__ == '__main__':
                 epoch_disc_loss.append(discriminator.train_on_batch(
                     X, [y, aux_y]))
 
-
                 # make new noise. we generate 2 * batch size here such that we have
                 # the generator optimize over an identical number of images as the
                 # discriminator
@@ -249,31 +250,28 @@ if __name__ == '__main__':
                 epoch_gen_loss.append(combined.train_on_batch(
                     [noise, sampled_labels.reshape((-1, 1))],
                     [trick, sampled_labels]))
+            print('\n Train time: ', time.clock() - train_start_time)
+            print('accum privacy, batches: ' + str(num_batches))
+            priv_start_time = time.clock()
 
-            print('\n accum privacy')
+            privacy_accum_op = priv_accountant.accumulate_privacy_spending(
+                [None, None], args.noise, batch_size)
             for index in range(num_batches):
-                privacy_accum_op = priv_accountant.accumulate_privacy_spending(
-                    [None, None], args.noise, batch_size)
-
                 with tf.control_dependencies([privacy_accum_op]):
                     spent_eps_deltas = priv_accountant.get_privacy_spent(
                         sess, target_eps=target_eps)
                     privacy_history.append(spent_eps_deltas)
+                sess.run([privacy_accum_op])
 
             for spent_eps, spent_delta in spent_eps_deltas:
                 print("spent privacy: eps %.4f delta %.5g" % (
                     spent_eps, spent_delta))
+            print('priv time: ', time.clock() - priv_start_time)
 
-            # terminate if delta less than 10^-5
             if spent_eps_deltas[-1][1] > 0.0001:
                 raise Exception('spent privacy')
 
-            sess.run([privacy_accum_op])
-
             print('\nTesting for epoch {}:'.format(epoch + 1))
-
-            # evaluate the testing loss here
-
             # generate a new batch of noise
             noise = np.random.uniform(-1, 1, (num_test, latent_size))
 
