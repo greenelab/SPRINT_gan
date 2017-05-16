@@ -325,7 +325,7 @@ class GaussianMomentsAccountant(MomentsAccountant):
   gaussian_moments.py.
   """
 
-  def __init__(self, total_examples, moment_orders=32):
+  def __init__(self, total_examples, moment_orders=64):
     """Initialization.
 
     Args:
