@@ -117,6 +117,7 @@ if __name__ == '__main__':
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--lr", type=float, default=0.0002)
     parser.add_argument("--batch_size", type=int, default=100)
+    parser.add_argument("--prefix", default='')
 
     args = parser.parse_args()
 
@@ -129,7 +130,7 @@ if __name__ == '__main__':
     adam_lr = args.lr
     adam_beta_1 = 0.5
 
-    directory = ('./output/' + str(args.noise) + '_' + str(args.clip_value) +
+    directory = ('./output/' + str(args.prefix) + str(args.noise) + '_' + str(args.clip_value) +
                  '_' + str(args.epochs) + '_' + str(args.lr) + '_' +
                  str(args.batch_size) + '/')
 
@@ -268,7 +269,7 @@ if __name__ == '__main__':
                     spent_eps, spent_delta))
             print('priv time: ', time.clock() - priv_start_time)
 
-            if spent_eps_deltas[-4][1] > 0.0001:
+            if spent_eps_deltas[-3][1] > 0.0001:
                 raise Exception('spent privacy')
 
             print('\nTesting for epoch {}:'.format(epoch + 1))

@@ -1,5 +1,3 @@
-CUDA_VISIBLE_DEVICES=1 python dp_gan.py --clip_value 0.0001 --noise 4 --epochs 1000 --lr 0.004 --batch_size 256
-CUDA_VISIBLE_DEVICES=1 python dp_gan.py --clip_value 0.0001 --noise 4 --epochs 1000 --lr 0.004 --batch_size 10
-CUDA_VISIBLE_DEVICES=1 python dp_gan.py --clip_value 0.0001 --noise 4 --epochs 1000 --lr 0.004 --batch_size 16
-CUDA_VISIBLE_DEVICES=1 python dp_gan.py --clip_value 0.0001 --noise 4 --epochs 1000 --lr 0.004 --batch_size 32
-CUDA_VISIBLE_DEVICES=1 python dp_gan.py --clip_value 0.0001 --noise 4 --epochs 1000 --lr 0.004 --batch_size 64
+CUDA_VISIBLE_DEVICES=0 python dp_gan.py --clip_value 0.0001 --noise 8 --epochs 500 --lr 0.002 --batch_size 100 --prefix p5_
+CUDA_VISIBLE_DEVICES=0 python dp_gan.py --clip_value 0.0001 --noise 8 --epochs 500 --lr 0.002 --batch_size 100 --prefix p6_
+CUDA_VISIBLE_DEVICES=0 python dp_gan.py --clip_value 0.0001 --noise 8 --epochs 500 --lr 0.002 --batch_size 100 --prefix p7_
