@@ -99,10 +99,6 @@ def build_discriminator():
     features = cnn(patient)
     cnn.summary()
 
-    # first output (name=generation) is whether or not the discriminator
-    # thinks the image that is being shown is fake, and the second output
-    # (name=auxiliary) is the class that the discriminator thinks the image
-    # belongs to.
     fake = Dense(1, activation='sigmoid', name='generation')(features)
     # aux could probably be 1 sigmoid too...
     aux = Dense(2, activation='softmax', name='auxiliary')(features)
@@ -144,7 +140,7 @@ if __name__ == '__main__':
             optimizer=NoisyAdam(lr=adam_lr, beta_1=adam_beta_1,
                                 clipnorm=args.clip_value,
                                 noise=(args.noise *
-                                       (args.clip_value) * args.clip_value)),
+                                       (args.clip_value ** 2)),
                                 loss=['binary_crossentropy',
                                       'sparse_categorical_crossentropy']
         )
