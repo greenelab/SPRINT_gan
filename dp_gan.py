@@ -28,7 +28,6 @@ from privacy_accountant import accountant, utils
 from custom_keras.noisy_optimizers import NoisyAdam
 
 training_size = 6000
-np.random.seed(1337)
 K.set_image_data_format('channels_first')
 
 target_eps = [0.125,0.25,0.5,1,2,4,8]
@@ -118,13 +117,14 @@ if __name__ == '__main__':
     parser.add_argument("--lr", type=float, default=0.0002)
     parser.add_argument("--batch_size", type=int, default=100)
     parser.add_argument("--prefix", default='')
-
+    parser.add_argument("--seed", type=int, default="123")
     args = parser.parse_args()
 
     print(args)
     epochs = args.epochs
     batch_size = args.batch_size
     latent_size = 100
+    np.random.seed(args.seed)
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = args.lr
@@ -143,8 +143,10 @@ if __name__ == '__main__':
         discriminator.compile(
             optimizer=NoisyAdam(lr=adam_lr, beta_1=adam_beta_1,
                                 clipnorm=args.clip_value,
-                                noise=(args.noise * args.clip_value)),
-            loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
+                                noise=(args.noise *
+                                       (args.clip_value) * args.clip_value)),
+                                loss=['binary_crossentropy',
+                                      'sparse_categorical_crossentropy']
         )
     else:
         discriminator = build_discriminator()
