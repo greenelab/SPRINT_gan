@@ -33,7 +33,7 @@ class NoisyAdam(Optimizer):
 
         if self.noise > 0:
             grads = [(g + K.random_normal(g.shape, mean=0,
-                                          stddev=(self.noise*self.clipnorm)))
+                                          stddev=(self.noise * (self.clipnorm ** 2)))
                      for g in grads]
         return grads
 

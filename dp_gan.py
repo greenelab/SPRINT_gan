@@ -139,8 +139,7 @@ if __name__ == '__main__':
         discriminator.compile(
             optimizer=NoisyAdam(lr=adam_lr, beta_1=adam_beta_1,
                                 clipnorm=args.clip_value,
-                                noise=(args.noise *
-                                       (args.clip_value ** 2)),
+                                noise=args.noise,
                                 loss=['binary_crossentropy',
                                       'sparse_categorical_crossentropy']
         )
