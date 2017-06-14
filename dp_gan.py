@@ -252,6 +252,7 @@ if __name__ == '__main__':
             print('accum privacy, batches: ' + str(num_batches))
             priv_start_time = time.clock()
 
+            # separate privacy accumulation for speed
             privacy_accum_op = priv_accountant.accumulate_privacy_spending(
                 [None, None], args.noise, batch_size)
             for index in range(num_batches):
