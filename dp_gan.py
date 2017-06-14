@@ -211,14 +211,14 @@ if __name__ == '__main__':
                 # generate a new batch of noise
                 noise = np.random.uniform(-1, 1, (batch_size, latent_size))
 
-                # get a batch of real images
+                # get a batch of real patients
                 image_batch = X_train[index * batch_size:(index + 1) * batch_size]
                 label_batch = y_train[index * batch_size:(index + 1) * batch_size]
 
                 # sample some labels from p_c
                 sampled_labels = np.random.randint(0, 2, batch_size)
 
-                # generate a batch of fake images, using the generated labels as a
+                # generate a batch of fake patients, using the generated labels as a
                 # conditioner. We reshape the sampled labels to be
                 # (batch_size, 1) so that we can feed them into the embedding
                 # layer as a length one sequence
@@ -235,7 +235,7 @@ if __name__ == '__main__':
                     X, [y, aux_y]))
 
                 # make new noise. we generate 2 * batch size here such that we have
-                # the generator optimize over an identical number of images as the
+                # the generator optimize over an identical number of patients as the
                 # discriminator
                 noise = np.random.uniform(-1, 1, (2 * batch_size, latent_size))
                 sampled_labels = np.random.randint(0, 2, 2 * batch_size)
@@ -273,7 +273,7 @@ if __name__ == '__main__':
             # generate a new batch of noise
             noise = np.random.uniform(-1, 1, (num_test, latent_size))
 
-            # sample some labels from p_c and generate images from them
+            # sample some labels from p_c and generate patients from them
             sampled_labels = np.random.randint(0, 2, num_test)
             generated_images = generator.predict(
                 [noise, sampled_labels.reshape((-1, 1))], verbose=False)
