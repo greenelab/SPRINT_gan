@@ -20,6 +20,7 @@ from keras.models import Sequential, Model
 from keras.optimizers import Adam
 from keras.utils.generic_utils import Progbar
 import numpy as np
+import random as rn
 import os
 import argparse
 import time
@@ -120,7 +121,11 @@ if __name__ == '__main__':
     epochs = args.epochs
     batch_size = args.batch_size
     latent_size = 100
+
+    # setting seed for reproducibility
     np.random.seed(args.seed)
+    tf.set_random_seed(args.seed)
+    rn.seed(arg.seed)
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = args.lr
@@ -171,11 +176,9 @@ if __name__ == '__main__':
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
     )
 
-    # get our mnist data, and force it to be of shape (..., 1, 28, 28) with
-    # range [-1, 1]
+    # get our input data
     X_input = pickle.load(open('./data/X_processed.pkl', 'rb'))
     y_input = pickle.load(open('./data/y_processed.pkl', 'rb'))
-
     print(X_input.shape, y_input.shape)
 
     X_train = X_input[:training_size]
