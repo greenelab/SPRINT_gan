@@ -21,6 +21,21 @@ def run(id):
     training_size = 6000
     latent_size = 100
 
+    X = pkl.load(open('./data/X_processed.pkl', 'rb'))
+    y = pkl.load(open('./data/y_processed.pkl', 'rb'))
+
+    X_train = X[:training_size]
+    y_train = y[:training_size]
+
+    X_test = X[training_size:]
+    y_test = y[training_size:]
+
+    X_train = X_train.reshape((X_train.shape[0], -1))
+    X_test = X_test.reshape((X_test.shape[0], -1))
+
+    classifier = RandomForestClassifier()
+    y_pred = classifier.fit(X_train, y_train).predict(X_test)
+
     lr_clf = linear_model.LogisticRegression()
     transfer_clf = RandomForestClassifier()
 
