@@ -18,6 +18,7 @@ from keras.models import load_model
 
 
 def run(id):
+    training_size = 6000
     latent_size = 100
 
     lr_clf = linear_model.LogisticRegression()
