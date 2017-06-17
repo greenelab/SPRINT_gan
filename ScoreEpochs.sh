@@ -1,0 +1,10 @@
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 0
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 1
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 2
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 3
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 4
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 5
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 6
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 7
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 8
+CUDA_VISIBLE_DEVICES=0 python score_epochs.py --id 9
