@@ -1,14 +1,20 @@
 import os
 import argparse
+from sklearn import linear_model
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+import pickle as pkl
+import numpy as np
+import pandas as pd
+import h5py
+import matplotlib.pyplot as plt
+from glob import glob
 
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 acgan = __import__('ac_gan')
-
-from glob import glob
 from keras.models import load_model
-from sklearn import linear_model
 
 
 def run(id):
