@@ -195,7 +195,10 @@ if __name__ == '__main__':
     test_history = defaultdict(list)
     privacy_history = []
 
-    with tf.Session() as sess:
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+
+    with tf.Session(config=config) as sess:
         eps = tf.placeholder(tf.float32)
         delta = tf.placeholder(tf.float32)
 

@@ -2,6 +2,7 @@ import tensorflow as tf
 from privacy_accountant import accountant, utils
 import argparse
 import time
+import sys
 
 import pickle as pkl
 
@@ -15,19 +16,25 @@ def calc_priv(noise, epochs, training_size, batch_size):
         target_eps = [0.125,0.25,0.5,1,2,4,8]
         priv_accountant = accountant.GaussianMomentsAccountant(training_size)
 
-        print('accum privacy, batches: ' + str(num_batches))
+        sys.stderr.write('accum privacy, batches: ' + str(num_batches))
         priv_start_time = time.clock()
         privacy_accum_op = priv_accountant.accumulate_privacy_spending(
           [None, None], args.noise, batch_size)
         tf.global_variables_initializer().run()
         for index in range(num_batches):
+            if index % 10000 == 0:
+                sys.stderr.write(str(index))
+                pkl.dump(privacy_history, open('./privacy/' + str(noise) + '_' +
+                         str(epochs) + '_' + str(training_size) + '_' + str(batch_size) +
+                         '.p', 'wb'))
+
             with tf.control_dependencies([privacy_accum_op]):
                 spent_eps_deltas = priv_accountant.get_privacy_spent(
                     sess, target_eps=target_eps)
                 privacy_history.append(spent_eps_deltas)
             sess.run([privacy_accum_op])
 
-        print('priv time: ', time.clock() - priv_start_time)
+        sys.stderr.write('priv time: ', time.clock() - priv_start_time)
 
         if spent_eps_deltas[-3][1] > 0.0001:
             raise Exception('spent privacy')
