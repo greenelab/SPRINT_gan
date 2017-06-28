@@ -24,20 +24,13 @@ def calc_priv(noise, epochs, training_size, batch_size):
         tf.global_variables_initializer().run()
 
         for index in range(1, num_batches+1):
-            if index % 10000 == 0:
-                print(index)
-
             sess.run([privacy_accum_op])
-
-            print(spent_eps_deltas[-7:])
-            spent_eps_deltas = priv_accountant.get_privacy_spent(
-                        sess, target_eps=target_eps)
-            print(spent_eps_deltas[-7:])
-            raise Exception('stop')
+            with tf.control_dependencies([privacy_accum_op]):
+                spent_eps_deltas = priv_accountant.get_privacy_spent(sess, target_eps=target_eps)
 
             if index % 6000 == 0:
-                with tf.control_dependencies([privacy_accum_op]):
-                    privacy_history.append(spent_eps_deltas)
+                print(index, spent_eps_deltas)
+                privacy_history.append(spent_eps_deltas)
 
         sys.stderr.write('priv time: ' + str(time.clock() - priv_start_time) +
                          '\n')
