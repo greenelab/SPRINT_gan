@@ -125,7 +125,7 @@ if __name__ == '__main__':
     # setting seed for reproducibility
     np.random.seed(args.seed)
     tf.set_random_seed(args.seed)
-    rn.seed(arg.seed)
+    rn.seed(args.seed)
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = args.lr
@@ -205,8 +205,11 @@ if __name__ == '__main__':
         for epoch in range(epochs):
             print('Epoch {} of {}'.format(epoch + 1, epochs))
 
-            num_batches = int(X_train.shape[0] / batch_size)
+            num_batches = training_size
             progress_bar = Progbar(target=num_batches)
+
+            random_sample = np.random.randint(0, training_size,
+                                              size=training_size)
 
             epoch_gen_loss = []
             epoch_disc_loss = []
@@ -218,8 +221,8 @@ if __name__ == '__main__':
                 noise = np.random.uniform(-1, 1, (batch_size, latent_size))
 
                 # get a batch of real patients
-                image_batch = X_train[index * batch_size:(index + 1) * batch_size]
-                label_batch = y_train[index * batch_size:(index + 1) * batch_size]
+                image_batch = np.expand_dims(X_train[random_sample[index]], axis=1)
+                label_batch = np.expand_dims(y_train[random_sample[index]], axis=1)
 
                 # sample some labels from p_c
                 sampled_labels = np.random.randint(0, 2, batch_size)
@@ -231,8 +234,6 @@ if __name__ == '__main__':
                 generated_images = generator.predict(
                     [noise, sampled_labels.reshape((-1, 1))], verbose=0)
 
-                # print(image_batch.shape)
-                # print(generated_images.shape)
                 X = np.concatenate((image_batch, generated_images))
                 y = np.array([1] * batch_size + [0] * batch_size)
                 aux_y = np.concatenate((label_batch, sampled_labels), axis=0)
@@ -259,22 +260,22 @@ if __name__ == '__main__':
             priv_start_time = time.clock()
 
             # separate privacy accumulation for speed
-            privacy_accum_op = priv_accountant.accumulate_privacy_spending(
-                [None, None], args.noise, batch_size)
-            for index in range(num_batches):
-                with tf.control_dependencies([privacy_accum_op]):
-                    spent_eps_deltas = priv_accountant.get_privacy_spent(
-                        sess, target_eps=target_eps)
-                    privacy_history.append(spent_eps_deltas)
-                sess.run([privacy_accum_op])
-
-            for spent_eps, spent_delta in spent_eps_deltas:
-                print("spent privacy: eps %.4f delta %.5g" % (
-                    spent_eps, spent_delta))
-            print('priv time: ', time.clock() - priv_start_time)
-
-            if spent_eps_deltas[-3][1] > 0.0001:
-                raise Exception('spent privacy')
+            # privacy_accum_op = priv_accountant.accumulate_privacy_spending(
+            #     [None, None], args.noise, batch_size)
+            # for index in range(num_batches):
+            #     with tf.control_dependencies([privacy_accum_op]):
+            #         spent_eps_deltas = priv_accountant.get_privacy_spent(
+            #             sess, target_eps=target_eps)
+            #         privacy_history.append(spent_eps_deltas)
+            #     sess.run([privacy_accum_op])
+            #
+            # for spent_eps, spent_delta in spent_eps_deltas:
+            #     print("spent privacy: eps %.4f delta %.5g" % (
+            #         spent_eps, spent_delta))
+            # print('priv time: ', time.clock() - priv_start_time)
+            #
+            # if spent_eps_deltas[-3][1] > 0.0001:
+            #     raise Exception('spent privacy')
 
             print('\nTesting for epoch {}:'.format(epoch + 1))
             # generate a new batch of noise
@@ -339,6 +340,8 @@ if __name__ == '__main__':
                     directory +
                     'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
 
-            pickle.dump({'train': train_history, 'test': test_history,
-                         'privacy': privacy_history},
+            pickle.dump({'train': train_history, 'test': test_history},
                         open(directory + 'acgan-history.pkl', 'wb'))
+            # pickle.dump({'train': train_history, 'test': test_history,
+            #              'privacy': privacy_history},
+            #             open(directory + 'acgan-history.pkl', 'wb'))
