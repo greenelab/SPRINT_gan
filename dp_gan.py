@@ -20,6 +20,7 @@ from keras.models import Sequential, Model
 from keras.optimizers import Adam
 from keras.utils.generic_utils import Progbar
 import numpy as np
+import random as rn
 import os
 import argparse
 import time
@@ -99,10 +100,6 @@ def build_discriminator():
     features = cnn(patient)
     cnn.summary()
 
-    # first output (name=generation) is whether or not the discriminator
-    # thinks the image that is being shown is fake, and the second output
-    # (name=auxiliary) is the class that the discriminator thinks the image
-    # belongs to.
     fake = Dense(1, activation='sigmoid', name='generation')(features)
     # aux could probably be 1 sigmoid too...
     aux = Dense(2, activation='softmax', name='auxiliary')(features)
@@ -124,7 +121,11 @@ if __name__ == '__main__':
     epochs = args.epochs
     batch_size = args.batch_size
     latent_size = 100
+
+    # setting seed for reproducibility
     np.random.seed(args.seed)
+    tf.set_random_seed(args.seed)
+    rn.seed(args.seed)
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = args.lr
@@ -143,10 +144,9 @@ if __name__ == '__main__':
         discriminator.compile(
             optimizer=NoisyAdam(lr=adam_lr, beta_1=adam_beta_1,
                                 clipnorm=args.clip_value,
-                                noise=(args.noise *
-                                       (args.clip_value) * args.clip_value)),
-                                loss=['binary_crossentropy',
-                                      'sparse_categorical_crossentropy']
+                                noise=args.noise),
+            loss=['binary_crossentropy',
+                  'sparse_categorical_crossentropy']
         )
     else:
         discriminator = build_discriminator()
@@ -176,11 +176,9 @@ if __name__ == '__main__':
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
     )
 
-    # get our mnist data, and force it to be of shape (..., 1, 28, 28) with
-    # range [-1, 1]
+    # get our input data
     X_input = pickle.load(open('./data/X_processed.pkl', 'rb'))
     y_input = pickle.load(open('./data/y_processed.pkl', 'rb'))
-
     print(X_input.shape, y_input.shape)
 
     X_train = X_input[:training_size]
@@ -197,15 +195,21 @@ if __name__ == '__main__':
     test_history = defaultdict(list)
     privacy_history = []
 
-    with tf.Session() as sess:
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+
+    with tf.Session(config=config) as sess:
         eps = tf.placeholder(tf.float32)
         delta = tf.placeholder(tf.float32)
 
         for epoch in range(epochs):
             print('Epoch {} of {}'.format(epoch + 1, epochs))
 
-            num_batches = int(X_train.shape[0] / batch_size)
+            num_batches = training_size
             progress_bar = Progbar(target=num_batches)
+
+            random_sample = np.random.randint(0, training_size,
+                                              size=training_size)
 
             epoch_gen_loss = []
             epoch_disc_loss = []
@@ -216,22 +220,20 @@ if __name__ == '__main__':
                 # generate a new batch of noise
                 noise = np.random.uniform(-1, 1, (batch_size, latent_size))
 
-                # get a batch of real images
-                image_batch = X_train[index * batch_size:(index + 1) * batch_size]
-                label_batch = y_train[index * batch_size:(index + 1) * batch_size]
+                # get a batch of real patients
+                image_batch = np.expand_dims(X_train[random_sample[index]], axis=1)
+                label_batch = np.expand_dims(y_train[random_sample[index]], axis=1)
 
                 # sample some labels from p_c
                 sampled_labels = np.random.randint(0, 2, batch_size)
 
-                # generate a batch of fake images, using the generated labels as a
+                # generate a batch of fake patients, using the generated labels as a
                 # conditioner. We reshape the sampled labels to be
                 # (batch_size, 1) so that we can feed them into the embedding
                 # layer as a length one sequence
                 generated_images = generator.predict(
                     [noise, sampled_labels.reshape((-1, 1))], verbose=0)
 
-                # print(image_batch.shape)
-                # print(generated_images.shape)
                 X = np.concatenate((image_batch, generated_images))
                 y = np.array([1] * batch_size + [0] * batch_size)
                 aux_y = np.concatenate((label_batch, sampled_labels), axis=0)
@@ -240,7 +242,7 @@ if __name__ == '__main__':
                     X, [y, aux_y]))
 
                 # make new noise. we generate 2 * batch size here such that we have
-                # the generator optimize over an identical number of images as the
+                # the generator optimize over an identical number of patients as the
                 # discriminator
                 noise = np.random.uniform(-1, 1, (2 * batch_size, latent_size))
                 sampled_labels = np.random.randint(0, 2, 2 * batch_size)
@@ -257,28 +259,29 @@ if __name__ == '__main__':
             print('accum privacy, batches: ' + str(num_batches))
             priv_start_time = time.clock()
 
-            privacy_accum_op = priv_accountant.accumulate_privacy_spending(
-                [None, None], args.noise, batch_size)
-            for index in range(num_batches):
-                with tf.control_dependencies([privacy_accum_op]):
-                    spent_eps_deltas = priv_accountant.get_privacy_spent(
-                        sess, target_eps=target_eps)
-                    privacy_history.append(spent_eps_deltas)
-                sess.run([privacy_accum_op])
-
-            for spent_eps, spent_delta in spent_eps_deltas:
-                print("spent privacy: eps %.4f delta %.5g" % (
-                    spent_eps, spent_delta))
-            print('priv time: ', time.clock() - priv_start_time)
-
-            if spent_eps_deltas[-3][1] > 0.0001:
-                raise Exception('spent privacy')
+            # separate privacy accumulation for speed
+            # privacy_accum_op = priv_accountant.accumulate_privacy_spending(
+            #     [None, None], args.noise, batch_size)
+            # for index in range(num_batches):
+            #     with tf.control_dependencies([privacy_accum_op]):
+            #         spent_eps_deltas = priv_accountant.get_privacy_spent(
+            #             sess, target_eps=target_eps)
+            #         privacy_history.append(spent_eps_deltas)
+            #     sess.run([privacy_accum_op])
+            #
+            # for spent_eps, spent_delta in spent_eps_deltas:
+            #     print("spent privacy: eps %.4f delta %.5g" % (
+            #         spent_eps, spent_delta))
+            # print('priv time: ', time.clock() - priv_start_time)
+            #
+            # if spent_eps_deltas[-3][1] > 0.0001:
+            #     raise Exception('spent privacy')
 
             print('\nTesting for epoch {}:'.format(epoch + 1))
             # generate a new batch of noise
             noise = np.random.uniform(-1, 1, (num_test, latent_size))
 
-            # sample some labels from p_c and generate images from them
+            # sample some labels from p_c and generate patients from them
             sampled_labels = np.random.randint(0, 2, num_test)
             generated_images = generator.predict(
                 [noise, sampled_labels.reshape((-1, 1))], verbose=False)
@@ -337,6 +340,8 @@ if __name__ == '__main__':
                     directory +
                     'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
 
-            pickle.dump({'train': train_history, 'test': test_history,
-                         'privacy': privacy_history},
+            pickle.dump({'train': train_history, 'test': test_history},
                         open(directory + 'acgan-history.pkl', 'wb'))
+            # pickle.dump({'train': train_history, 'test': test_history,
+            #              'privacy': privacy_history},
+            #             open(directory + 'acgan-history.pkl', 'wb'))
