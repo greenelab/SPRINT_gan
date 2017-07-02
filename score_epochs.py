@@ -9,6 +9,7 @@ import pandas as pd
 import h5py
 import matplotlib.pyplot as plt
 from glob import glob
+import tensorflow as tf
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -17,7 +18,7 @@ acgan = __import__('ac_gan')
 from keras.models import load_model
 
 
-def run(id):
+def run(filename):
     training_size = 6000
     latent_size = 100
 
@@ -41,10 +42,10 @@ def run(id):
 
     mean_scores = []
     lr_scores = []
-    directory = './output/p' + str(id) + '_8.0_0.0001_500_0.002_100/'
+    directory = './output/' + str(filename) + '/'
     # directory = './output/acgan_500_0.0002_100/'
 
-    for i in range(0, 500):
+    for i in range(0, 499):
         gen_name = sorted(glob(directory + 'params_generator*'))[i]
         print(gen_name)
         g = load_model(gen_name)
@@ -63,16 +64,22 @@ def run(id):
         gen_X_train = gen_X_train.reshape(generate_count, -1)
         gen_y_train = sampled_labels
 
-
-        mean_scores.append(accuracy_score(y_test, transfer_clf.fit(gen_X_train, gen_y_train).predict(X_test)))
-        lr_scores.append(accuracy_score(y_test, lr_clf.fit(gen_X_train, gen_y_train).predict(X_test)))
-    pkl.dump({'rf': mean_scores, 'lr': lr_scores}, open(directory + 'epoch_scores.p', 'wb'))
+        mean_scores.append(accuracy_score(
+            y_test,
+            transfer_clf.fit(gen_X_train, gen_y_train).predict(X_test)))
+        lr_scores.append(accuracy_score(
+            y_test, lr_clf.fit(gen_X_train, gen_y_train).predict(X_test)))
+    pkl.dump({'rf': mean_scores, 'lr': lr_scores}, open(directory +
+             'epoch_scores.p', 'wb'))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--id", type=int)
+    parser.add_argument("--name", type=str)
 
     args = parser.parse_args()
-    if args.id is not None:
-        run(args.id)
+    if args.name is not None:
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        with tf.Session(config=config) as sess:
+            run(args.name)

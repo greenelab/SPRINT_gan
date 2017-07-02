@@ -13,7 +13,7 @@ def calc_priv(noise, epochs, training_size, batch_size):
         eps = tf.placeholder(tf.float32)
         delta = tf.placeholder(tf.float32)
 
-        num_batches = epochs * (training_size / batch_size)
+        num_batches = (epochs+1) * (training_size / batch_size)
         target_eps = [0.125, 0.25, 0.5, 1, 2, 4, 8]
         priv_accountant = accountant.GaussianMomentsAccountant(training_size)
 
@@ -23,7 +23,7 @@ def calc_priv(noise, epochs, training_size, batch_size):
           [None, None], args.noise, batch_size)
         tf.global_variables_initializer().run()
 
-        for index in range(1, num_batches+1):
+        for index in range(0, num_batches+1):
             sess.run([privacy_accum_op])
             with tf.control_dependencies([privacy_accum_op]):
                 spent_eps_deltas = priv_accountant.get_privacy_spent(sess, target_eps=target_eps)

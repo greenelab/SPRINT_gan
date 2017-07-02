@@ -1,0 +1,12 @@
+workspace:
+  path: src/
+
+pipeline:
+  build_figures:
+    image: brettbj/sprint-gan:latest
+    commands:
+    	- ls /drone/src
+    	- jupyter nbconvert --to html --execute Analysis.ipynb
+    	- cp analysis.html ./figures/analysis.html
+  volumes:
+      - /data/SPRINT:/data/SPRINT

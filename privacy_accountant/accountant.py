@@ -247,7 +247,7 @@ class MomentsAccountant(object):
     min_delta = 1.0
     for moment_order, log_moment in log_moments:
       if math.isinf(log_moment) or math.isnan(log_moment):
-        sys.stderr.write("The %d-th order is inf or Nan\n" % moment_order)
+        #sys.stderr.write("The %d-th order is inf or Nan\n" % moment_order)
         continue
       if log_moment < moment_order * eps:
         min_delta = min(min_delta,
@@ -258,7 +258,7 @@ class MomentsAccountant(object):
     min_eps = float("inf")
     for moment_order, log_moment in log_moments:
       if math.isinf(log_moment) or math.isnan(log_moment):
-        sys.stderr.write("The %d-th order is inf or Nan\n" % moment_order)
+        #sys.stderr.write("The %d-th order is inf or Nan\n" % moment_order)
         continue
       min_eps = min(min_eps, (log_moment - math.log(delta)) / moment_order)
     return min_eps
