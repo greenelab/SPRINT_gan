@@ -14,10 +14,13 @@ RUN apt-get update && apt-get install -y \
                 python-pandas \
                 python-sklearn \
                 python-sympy \
+		python-pip \
                 && \
         apt-get clean && \
         apt-get autoremove && \
         rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip
 
 # Install other useful Python packages using pip
 RUN pip --no-cache-dir install --upgrade ipython && \
@@ -35,9 +38,7 @@ RUN pip --no-cache-dir install --upgrade ipython && \
                 && \
         python -m ipykernel.kernelspec
 
-RUN apt-get install -y libffi-dev libssl-dev
-RUN pip install 'requests[security]'
-RUN pip install --upgrade html5lib==1.0b8
 RUN pip install seaborn
 
+# since we're not training models in docker, CPU version is fine
 RUN pip install tensorflow keras
