@@ -25,7 +25,7 @@ pipeline:
 
       - git fetch
       - git branch --set-upstream-to=origin/master master
-      - git pull -s recursive -X ours --allow-unrelated-histories
+      - git pull -s recursive -X ours
       - git push
 
 branches: develop
