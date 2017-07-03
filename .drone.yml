@@ -18,7 +18,7 @@ pipeline:
       - git config user.email "brettbj@gmail.com"
       - git config user.name "Brett Beaulieu-Jones"
       - git config --global push.default simple
-      - git remote set-url origin https://brettbj:$GIT_PUBLISH_KEY@github.com/brettbj/ca_SPRINT_GAN
+      - git remote set-url origin https://brettbj:$GIT_PUBLISH_KEY@github.com/greenelab/SPRINT_gan
 
       - git add ./figures/*
       - git commit -a -m "Commit from drone"
