@@ -1,5 +1,16 @@
-# Privacy-preserving generative deep neural networks support clinical data sharingBrett K. Beaulieu-Jones<sup>1</sup>, Zhiwei Steven Wu<sup>2</sup>, Chris Williams<sup>3</sup>, Casey S. Greene<sup>3</sup>*<sup>1</sup>Genomics and Computational Biology Graduate Group, Perelman School of Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, USA.
-<sup>2</sup>Computer and Information Science, School of Engineering and Applied Sciences, University of Pennsylvania, Philadelphia, Pennsylvania, USA.<sup>3</sup>Department of Systems Pharmacology and Translational Therapeutics, Perelman School of Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, USA.To whom correspondence should be addressed: csgreene (at) upenn.edu### Pre-print coming soon.
+# Privacy-preserving generative deep neural networks support clinical data sharing
+
+Brett K. Beaulieu-Jones<sup>1</sup>, Zhiwei Steven Wu<sup>2</sup>, Chris Williams<sup>3</sup>, Casey S. Greene<sup>3</sup>*
+
+<sup>1</sup>Genomics and Computational Biology Graduate Group, Perelman School of Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, USA.
+
+<sup>2</sup>Computer and Information Science, School of Engineering and Applied Sciences, University of Pennsylvania, Philadelphia, Pennsylvania, USA.
+
+<sup>3</sup>Department of Systems Pharmacology and Translational Therapeutics, Perelman School of Medicine, University of Pennsylvania, Philadelphia, Pennsylvania, USA.
+
+To whom correspondence should be addressed: csgreene (at) upenn.edu
+
+### https://doi.org/10.1101/159756
 
 Introduction
 --------
