@@ -182,8 +182,8 @@ if __name__ == '__main__':
     )
 
     # get our input data
-    X_input = pickle.load(open('./data/MIMIC/X_processed_5.pkl', 'rb'))
-    y_input = pickle.load(open('./data/MIMIC/y_processed_5.pkl', 'rb'))
+    X_input = pickle.load(open('/data/SPRINT/MIMIC/X_processed_5.pkl', 'rb'))
+    y_input = pickle.load(open('/data/SPRINT/MIMIC/y_processed_5.pkl', 'rb'))
     print(X_input.shape, y_input.shape)
 
     X_train = X_input[:training_size]
