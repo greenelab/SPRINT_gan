@@ -20,12 +20,19 @@ from keras.models import Sequential, Model
 from keras.optimizers import Adam
 from keras.utils.generic_utils import Progbar
 import numpy as np
+import random as rn
 import os
 import argparse
+import time
 
-training_size = 6000
-np.random.seed(1337)
+from privacy_accountant import accountant, utils
+from custom_keras.noisy_optimizers import NoisyAdam
+
+training_size = 7500
 K.set_image_data_format('channels_first')
+
+target_eps = [0.125,0.25,0.5,1,2,4,8]
+priv_accountant = accountant.GaussianMomentsAccountant(training_size)
 
 def build_generator(latent_size):
     # we will map a pair of (z, L), where z is a latent vector and L is a
@@ -92,10 +99,6 @@ def build_discriminator():
     features = cnn(patient)
     cnn.summary()
 
-    # first output (name=generation) is whether or not the discriminator
-    # thinks the image that is being shown is fake, and the second output
-    # (name=auxiliary) is the class that the discriminator thinks the image
-    # belongs to.
     fake = Dense(1, activation='sigmoid', name='generation')(features)
     # aux could probably be 1 sigmoid too...
     aux = Dense(2, activation='softmax', name='auxiliary')(features)
@@ -104,32 +107,58 @@ def build_discriminator():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument("--noise", type=float, default=0)
+    parser.add_argument("--clip_value", type=float, default=0)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--lr", type=float, default=0.0002)
-    parser.add_argument("--batch_size", type=int, default=100)
-
+    # for now this should always be 1, we do not yet implement the batch and lot
+    # size argument seen here - https://arxiv.org/abs/1607.00133
+    parser.add_argument("--batch_size", type=int, default=1)
+    parser.add_argument("--prefix", default='')
+    parser.add_argument("--seed", type=int, default="123")
     args = parser.parse_args()
 
     print(args)
     epochs = args.epochs
+
+    if args.batch_size > 1:
+        raise('Batch sizes greater than 1 are not yet implemented')
+
     batch_size = args.batch_size
     latent_size = 100
+
+    # setting seed for reproducibility
+    np.random.seed(args.seed)
+    tf.set_random_seed(args.seed)
+    rn.seed(args.seed)
 
     # Adam parameters suggested in https://arxiv.org/abs/1511.06434
     adam_lr = args.lr
     adam_beta_1 = 0.5
 
-    directory = ('./output/acgan' + '_' + str(args.epochs) + '_' +
+    directory = ('./MIMIC/output/' + str(args.prefix) + str(args.noise) + '_' +
+                 str(args.clip_value) + '_' + str(args.epochs) + '_' +
                  str(args.lr) + '_' + str(args.batch_size) + '/')
 
     if not os.path.exists(directory):
         os.mkdir(directory)
 
-    discriminator = build_discriminator()
-    discriminator.compile(
-        optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
-        loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
-    )
+    if args.clip_value > 0:
+        # build the discriminator
+        discriminator = build_discriminator()
+        discriminator.compile(
+            optimizer=NoisyAdam(lr=adam_lr, beta_1=adam_beta_1,
+                                clipnorm=args.clip_value,
+                                noise=args.noise),
+            loss=['binary_crossentropy',
+                  'sparse_categorical_crossentropy']
+        )
+    else:
+        discriminator = build_discriminator()
+        discriminator.compile(
+            optimizer=Adam(lr=adam_lr, beta_1=adam_beta_1),
+            loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
+        )
 
     # build the generator
     generator = build_generator(latent_size)
@@ -152,9 +181,9 @@ if __name__ == '__main__':
         loss=['binary_crossentropy', 'sparse_categorical_crossentropy']
     )
 
-    X_input = pickle.load(open('/data/SPRINT/MIMIC/X_processed_5.pkl', 'rb'))
-    y_input = pickle.load(open('/data/SPRINT/MIMIC/y_processed_5.pkl', 'rb'))
-
+    # get our input data
+    X_input = pickle.load(open('./data/MIMIC/X_processed_5.pkl', 'rb'))
+    y_input = pickle.load(open('./data/MIMIC/y_processed_5.pkl', 'rb'))
     print(X_input.shape, y_input.shape)
 
     X_train = X_input[:training_size]
@@ -171,40 +200,45 @@ if __name__ == '__main__':
     test_history = defaultdict(list)
     privacy_history = []
 
-    with tf.Session() as sess:
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+
+    with tf.Session(config=config) as sess:
         eps = tf.placeholder(tf.float32)
         delta = tf.placeholder(tf.float32)
 
         for epoch in range(epochs):
             print('Epoch {} of {}'.format(epoch + 1, epochs))
 
-            num_batches = int(X_train.shape[0] / batch_size)
+            num_batches = training_size
             progress_bar = Progbar(target=num_batches)
+
+            random_sample = np.random.randint(0, training_size,
+                                              size=training_size)
 
             epoch_gen_loss = []
             epoch_disc_loss = []
 
+            train_start_time = time.clock()
             for index in range(num_batches):
                 progress_bar.update(index)
                 # generate a new batch of noise
                 noise = np.random.uniform(-1, 1, (batch_size, latent_size))
 
-                # get a batch of real images
-                image_batch = X_train[index * batch_size:(index + 1) * batch_size]
-                label_batch = y_train[index * batch_size:(index + 1) * batch_size]
+                # get a batch of real patients
+                image_batch = np.expand_dims(X_train[random_sample[index]], axis=1)
+                label_batch = np.expand_dims(y_train[random_sample[index]], axis=1)
 
                 # sample some labels from p_c
                 sampled_labels = np.random.randint(0, 2, batch_size)
 
-                # generate a batch of fake images, using the generated labels as a
+                # generate a batch of fake patients, using the generated labels as a
                 # conditioner. We reshape the sampled labels to be
                 # (batch_size, 1) so that we can feed them into the embedding
                 # layer as a length one sequence
                 generated_images = generator.predict(
                     [noise, sampled_labels.reshape((-1, 1))], verbose=0)
 
-                # print(image_batch.shape)
-                # print(generated_images.shape)
                 X = np.concatenate((image_batch, generated_images))
                 y = np.array([1] * batch_size + [0] * batch_size)
                 aux_y = np.concatenate((label_batch, sampled_labels), axis=0)
@@ -212,9 +246,8 @@ if __name__ == '__main__':
                 epoch_disc_loss.append(discriminator.train_on_batch(
                     X, [y, aux_y]))
 
-
                 # make new noise. we generate 2 * batch size here such that we have
-                # the generator optimize over an identical number of images as the
+                # the generator optimize over an identical number of patients as the
                 # discriminator
                 noise = np.random.uniform(-1, 1, (2 * batch_size, latent_size))
                 sampled_labels = np.random.randint(0, 2, 2 * batch_size)
@@ -227,15 +260,33 @@ if __name__ == '__main__':
                 epoch_gen_loss.append(combined.train_on_batch(
                     [noise, sampled_labels.reshape((-1, 1))],
                     [trick, sampled_labels]))
+            print('\n Train time: ', time.clock() - train_start_time)
+            print('accum privacy, batches: ' + str(num_batches))
+            priv_start_time = time.clock()
+
+            # separate privacy accumulation for speed
+            # privacy_accum_op = priv_accountant.accumulate_privacy_spending(
+            #     [None, None], args.noise, batch_size)
+            # for index in range(num_batches):
+            #     with tf.control_dependencies([privacy_accum_op]):
+            #         spent_eps_deltas = priv_accountant.get_privacy_spent(
+            #             sess, target_eps=target_eps)
+            #         privacy_history.append(spent_eps_deltas)
+            #     sess.run([privacy_accum_op])
+            #
+            # for spent_eps, spent_delta in spent_eps_deltas:
+            #     print("spent privacy: eps %.4f delta %.5g" % (
+            #         spent_eps, spent_delta))
+            # print('priv time: ', time.clock() - priv_start_time)
+            #
+            # if spent_eps_deltas[-3][1] > 0.0001:
+            #     raise Exception('spent privacy')
 
             print('\nTesting for epoch {}:'.format(epoch + 1))
-
-            # evaluate the testing loss here
-
             # generate a new batch of noise
             noise = np.random.uniform(-1, 1, (num_test, latent_size))
 
-            # sample some labels from p_c and generate images from them
+            # sample some labels from p_c and generate patients from them
             sampled_labels = np.random.randint(0, 2, num_test)
             generated_images = generator.predict(
                 [noise, sampled_labels.reshape((-1, 1))], verbose=False)
@@ -294,6 +345,8 @@ if __name__ == '__main__':
                     directory +
                     'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
 
-            pickle.dump({'train': train_history, 'test': test_history,
-                         'privacy': privacy_history},
+            pickle.dump({'train': train_history, 'test': test_history},
                         open(directory + 'acgan-history.pkl', 'wb'))
+            # pickle.dump({'train': train_history, 'test': test_history,
+            #              'privacy': privacy_history},
+            #             open(directory + 'acgan-history.pkl', 'wb'))
