@@ -25,14 +25,14 @@ import os
 import argparse
 import time
 
-from privacy_accountant import accountant, utils
+# from privacy_accountant import accountant, utils
 from custom_keras.noisy_optimizers import NoisyAdam
 
 training_size = 7500
 K.set_image_data_format('channels_first')
 
 target_eps = [0.125,0.25,0.5,1,2,4,8]
-priv_accountant = accountant.GaussianMomentsAccountant(training_size)
+# priv_accountant = accountant.GaussianMomentsAccountant(training_size)
 
 def build_generator(latent_size):
     # we will map a pair of (z, L), where z is a latent vector and L is a
