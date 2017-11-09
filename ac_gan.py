@@ -155,8 +155,8 @@ if __name__ == '__main__':
 
     # get our mnist data, and force it to be of shape (..., 1, 28, 28) with
     # range [-1, 1]
-    X_input = pickle.load(open('./data/X_processed.pkl', 'rb'))
-    y_input = pickle.load(open('./data/y_processed.pkl', 'rb'))
+    X_input = pickle.load(open('/data/SPRINT/X_processed.pkl', 'rb'))
+    y_input = pickle.load(open('/data/SPRINT/y_processed.pkl', 'rb'))
 
     print(X_input.shape, y_input.shape)
 

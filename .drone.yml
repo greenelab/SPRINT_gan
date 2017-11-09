@@ -1,0 +1,31 @@
+workspace:
+  path: src/
+
+pipeline:
+  build_figures:
+    image: brettbj/sprint-gan:latest
+    commands:
+      - ls /drone/src
+      - jupyter nbconvert --ExecutePreprocessor.timeout=6000 --to html --execute Analysis.ipynb
+      - cp Analysis.html ./figures/Analysis.html
+    volumes:
+      - /data/SPRINT:/data/SPRINT
+
+  push_to_github:
+    image: brettbj/ehr-imputation:latest
+    secrets: [ git_publish_key ]
+    commands:
+      - git config user.email "brettbj@gmail.com"
+      - git config user.name "Brett Beaulieu-Jones"
+      - git config --global push.default simple
+      - git remote set-url origin https://brettbj:$GIT_PUBLISH_KEY@github.com/greenelab/SPRINT_gan
+
+      - git add ./figures/*
+      - git commit -a -m "Commit from drone"
+
+      - git fetch
+      - git branch --set-upstream-to=origin/master master
+      - git pull -s recursive -X ours
+      - git push
+
+branches: develop

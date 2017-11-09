@@ -177,8 +177,8 @@ if __name__ == '__main__':
     )
 
     # get our input data
-    X_input = pickle.load(open('./data/X_processed.pkl', 'rb'))
-    y_input = pickle.load(open('./data/y_processed.pkl', 'rb'))
+    X_input = pickle.load(open('/data/SPRINT/X_processed.pkl', 'rb'))
+    y_input = pickle.load(open('/data/SPRINT/y_processed.pkl', 'rb'))
     print(X_input.shape, y_input.shape)
 
     X_train = X_input[:training_size]
@@ -260,22 +260,22 @@ if __name__ == '__main__':
             priv_start_time = time.clock()
 
             # separate privacy accumulation for speed
-            # privacy_accum_op = priv_accountant.accumulate_privacy_spending(
-            #     [None, None], args.noise, batch_size)
-            # for index in range(num_batches):
-            #     with tf.control_dependencies([privacy_accum_op]):
-            #         spent_eps_deltas = priv_accountant.get_privacy_spent(
-            #             sess, target_eps=target_eps)
-            #         privacy_history.append(spent_eps_deltas)
-            #     sess.run([privacy_accum_op])
-            #
-            # for spent_eps, spent_delta in spent_eps_deltas:
-            #     print("spent privacy: eps %.4f delta %.5g" % (
-            #         spent_eps, spent_delta))
-            # print('priv time: ', time.clock() - priv_start_time)
-            #
-            # if spent_eps_deltas[-3][1] > 0.0001:
-            #     raise Exception('spent privacy')
+            privacy_accum_op = priv_accountant.accumulate_privacy_spending(
+                [None, None], args.noise, batch_size)
+            for index in range(num_batches):
+                with tf.control_dependencies([privacy_accum_op]):
+                    spent_eps_deltas = priv_accountant.get_privacy_spent(
+                        sess, target_eps=target_eps)
+                    privacy_history.append(spent_eps_deltas)
+                sess.run([privacy_accum_op])
+
+            for spent_eps, spent_delta in spent_eps_deltas:
+                print("spent privacy: eps %.4f delta %.5g" % (
+                    spent_eps, spent_delta))
+            print('priv time: ', time.clock() - priv_start_time)
+
+            if spent_eps_deltas[-3][1] > 0.0001:
+                raise Exception('spent privacy')
 
             print('\nTesting for epoch {}:'.format(epoch + 1))
             # generate a new batch of noise
@@ -340,8 +340,6 @@ if __name__ == '__main__':
                     directory +
                     'params_discriminator_epoch_{0:03d}.h5'.format(epoch))
 
-            pickle.dump({'train': train_history, 'test': test_history},
+            pickle.dump({'train': train_history, 'test': test_history,
+                         'privacy': privacy_history},
                         open(directory + 'acgan-history.pkl', 'wb'))
-            # pickle.dump({'train': train_history, 'test': test_history,
-            #              'privacy': privacy_history},
-            #             open(directory + 'acgan-history.pkl', 'wb'))
