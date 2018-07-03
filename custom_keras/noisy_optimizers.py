@@ -33,7 +33,7 @@ class NoisyAdam(Optimizer):
 
         if self.noise > 0:
             grads = [(g + K.random_normal(g.shape, mean=0,
-                                          stddev=(self.noise * (self.clipnorm ** 2))))
+                                          stddev=(self.noise * self.clipnorm)))
                      for g in grads]
         return grads
 
@@ -77,72 +77,4 @@ class NoisyAdam(Optimizer):
                   'decay': float(K.get_value(self.decay)),
                   'epsilon': self.epsilon}
         base_config = super(NoisyAdam, self).get_config()
-        return dict(list(base_config.items()) + list(config.items()))
-
-
-class NoisySGD(Optimizer):
-    '''Noisy Stochastic gradient descent, with support for momentum,
-    learning rate decay, and Nesterov momentum.
-    # Arguments
-        lr: float >= 0. Learning rate.
-        sigma: gaussian noise at each step
-        momentum: float >= 0. Parameter updates momentum.
-        decay: float >= 0. Learning rate decay over each update.
-        nesterov: boolean. Whether to apply Nesterov momentum.
-    '''
-    def __init__(self, lr=0.01, momentum=0., decay=0.,
-                 nesterov=False, noise=0, priv_accountant=None, **kwargs):
-        super(NoisySGD, self).__init__(**kwargs)
-        self.iterations = K.variable(0.)
-        self.lr = K.variable(lr)
-        self.momentum = K.variable(momentum)
-        self.decay = K.variable(decay)
-        self.initial_decay = decay
-        self.nesterov = nesterov
-        self.noise = noise
-
-        self.priv_accountant = priv_accountant
-        self.sanitized_gradients = None
-
-    def get_updates(self, params, constraints, loss):
-        grads = self.get_gradients(loss, params)
-        self.updates = []
-
-        lr = self.lr
-        if self.initial_decay > 0:
-            lr *= (1. / (1. + self.decay * self.iterations))
-            self.updates.append(K.update_add(self.iterations, 1))
-
-        # momentum
-        shapes = [K.get_variable_shape(p) for p in params]
-        moments = [K.zeros(shape) for shape in shapes]
-        self.weights = [self.iterations] + moments
-        for p, g, m in zip(params, grads, moments):
-            if self.noise > 0:
-                g =  g + K.random_normal(g.shape, mean=0, stddev=(self.noise))
-
-            v = self.momentum * m - lr * g  # velocity
-            self.updates.append(K.update(m, v))
-
-            if self.nesterov:
-                new_p = p + self.momentum * v - lr * g
-            else:
-                new_p = p + v
-
-            # apply constraints
-            if p in constraints:
-                c = constraints[p]
-                new_p = c(new_p)
-
-            self.updates.append(K.update(p, new_p))
-        self.sanitized_gradients = None
-        return self.updates
-
-    def get_config(self):
-        config = {'lr': float(K.get_value(self.lr)),
-                  'sigma': float(K.get_value(self.sigma)),
-                  'momentum': float(K.get_value(self.momentum)),
-                  'decay': float(K.get_value(self.decay)),
-                  'nesterov': self.nesterov}
-        base_config = super(NoisySGD, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
